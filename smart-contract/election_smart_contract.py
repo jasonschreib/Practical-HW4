@@ -73,9 +73,9 @@ def approval_program():
         [Txn.on_completion() == OnComplete.UpdateApplication, Return(is_creator)],
         [Txn.on_completion() == OnComplete.CloseOut, on_closeout],
         [Txn.on_completion() == OnComplete.OptIn, on_register],
-
-        # TODO: Complete the cases that will trigger the update_user_status and on_vote sequences
-
+        # 1.1: the cases that will trigger the update_user_status and on_vote sequences
+        [Txn.on_completion() == OnComplete.vote, on_vote],
+        [Txn.on_completion() == OnComplete.updateUserStatus, on_update_user_status]
     )
 
     return program
