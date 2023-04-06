@@ -11,6 +11,7 @@ def approval_program():
         [
             # TODO:
             # Check number of required arguments are present
+            Assert(Txn.application_args == 4),
             # Store relevant parameters of the election. When storing the options to vote for,
             # consider storing all of them as a string separated by commas e.g: "A,B,C,D".
             # Note that index-wise, A=0, B=1, C=2, D=3
