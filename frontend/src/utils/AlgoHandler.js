@@ -26,7 +26,7 @@ class AlgoHandler {
 
     // Setup the indexer client using the secrets imported variable
     // TODO -----------------------------------------------------------------------------
-    this.indexerClient = indexerServer;
+    this.indexerClient = secrets.indexerServer;
   }
 
   /**
@@ -39,12 +39,20 @@ class AlgoHandler {
     let accounts = [];
 
     // Attempt to connect to AlgoSigner, note you will have to use the "await" keyword
-    // If this fails or an error occurs, return an empty array
     // TODO -----------------------------------------------------------------------------
+    try {
+        await connectToAlgosigner();
+        console.log(accountData);
+        // Retrieve all the AlgoSigner accounts on the TestNet
+        // Note they may be in this format: [{address: "address1"}, {address: "address2"}, etc]
+        accounts.push(accountData);
+    } catch(e) {
+        // If this fails or an error occurs, return an empty array
+        console.error(e);
+        return [];
+    }
 
 
-    // Retrieve all the AlgoSigner accounts on the TestNet
-    // Note they may be in this format: [{address: "address1"}, {address: "address2"}, etc]
     // TODO -----------------------------------------------------------------------------
 
 
@@ -69,8 +77,12 @@ class AlgoHandler {
   async getLatestRound() {
     // Retrieve the algod client status
     // Return the "last-round" value from that status
-    // TODO -----------------------------------------------------------------------------
+    var lastround = (await algodclient.status()).lastRound;
+    return lastround;
+    )().catch(e => {
+    console.log(e);
     return 0;
+    }
   }
 
   /** 
@@ -270,6 +282,27 @@ class AlgoHandler {
   async clearState(address, appID) {
     // TODO -----------------------------------------------------------------------------
   }
+}
+
+/*Helper function to connect to Algosigner*/
+function connectToAlgosigner() {
+    /*if AlgoSigner exists */
+    if(typeof AlgoSigner !== 'undefined') {
+        // connects to the browser AlgoSigner instance
+        AlgoSigner.connect()
+        // finds the TestNet accounts currently in AlgoSigner
+        .then(() => AlgoSigner.accounts({
+            ledger: 'TestNet'
+        }))
+        .then((accountData) => {
+            // the accountData object should contain the Algorand addresses from TestNet that AlgoSigner currently knows about
+            return accountData;
+        })
+        .catch((e) => {
+            // handle errors and perform error cleanup here
+            console.error(e);
+        }
+    }
 }
 
 // create and export a singular AlgoHandler instance
