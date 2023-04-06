@@ -22,11 +22,11 @@ class AlgoHandler {
 
     // Setup the algod client using the secrets imported variable
     // TODO -----------------------------------------------------------------------------
-    this.algodClient = null;
+    this.algodClient = secrets.algodServer;
 
     // Setup the indexer client using the secrets imported variable
     // TODO -----------------------------------------------------------------------------
-    this.indexerClient = null;
+    this.indexerClient = indexerServer;
   }
 
   /**
