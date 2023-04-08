@@ -11,15 +11,19 @@ def approval_program():
         [
             # TODO:
             # Check number of required arguments are present
-            Assert(Txn.application_args == 4),
+            Assert(Txn.application_args.length() == 3),
             # Store relevant parameters of the election. When storing the options to vote for,
             # consider storing all of them as a string separated by commas e.g: "A,B,C,D".
             # Note that index-wise, A=0, B=1, C=2, D=3
+            App.globalPut(Bytes('ElectionEnd'), Btoi(Txn.application_args[0])),
+            App.globalPut(Bytes('NumVoteOptions'), Btoi(Txn.application_args[1])),
+            App.globalPut(Bytes('VoteOptions'), Btoi(Txn.application_args[2])),
             # Set all initial vote tallies to 0 for all vote options, keys are the vote options
             For(
-
+            #vars storing votes for each option
+                i.store(Int(0)), i.load() < Btoi(Txn.application_args[1]), i.store(i.load() + Int(1))
             ).Do(
-
+                App.globalPut(Concat(Bytes("VotesFor"), itoa(i.load())), Int(0))
             ),
 
             Return(Int(1)),
