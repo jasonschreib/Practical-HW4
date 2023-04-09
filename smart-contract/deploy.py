@@ -1,4 +1,4 @@
-from algosdk.future import transaction
+from algosdk import transaction
 from algosdk import account, mnemonic
 from secrets import account_mnemonics
 from election_params import local_ints, local_bytes, global_ints, \

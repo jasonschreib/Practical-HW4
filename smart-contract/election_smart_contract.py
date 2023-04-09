@@ -9,7 +9,6 @@ def approval_program():
 
     on_creation = Seq(
         [
-            # TODO:
             # Check number of required arguments are present
             Assert(Txn.application_args.length() == 3),
             # Store relevant parameters of the election. When storing the options to vote for,
@@ -25,7 +24,6 @@ def approval_program():
             ).Do(
                 App.globalPut(Concat(Bytes("VotesFor"), itoa(i.load())), Int(0))
             ),
-
             Return(Int(1)),
         ]
     )
@@ -45,8 +43,22 @@ def approval_program():
     on_closeout = Seq(
         # TODO: CLOSE OUT:
         [
+        #called when user removes interaction with this smart contract from their account.
 
-            Return(Int(1))
+        #Removes the user's vote from the correct vote tally if and only if the user closes out of program before the end of the election.
+        #Otherwise, does nothing
+            get_vote_of_sender,
+            If(
+                And(
+                    Global.round() <= App.globalGet(Bytes("VoteEnd")),
+                    get_vote_of_sender.hasValue(),
+                ),
+                App.globalPut(
+                    get_vote_of_sender.value(),
+                    App.globalGet(get_vote_of_sender.value()) - Int(1),
+                ),
+            ),
+            Return(Int(1)),
         ]
     )
 

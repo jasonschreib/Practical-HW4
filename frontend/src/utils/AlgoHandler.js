@@ -77,12 +77,9 @@ class AlgoHandler {
   async getLatestRound() {
     // Retrieve the algod client status
     // Return the "last-round" value from that status
-    var lastround = (await algodclient.status()).lastRound;
-    return lastround;
-    )().catch(e => {
-    console.log(e);
+    var lastRound = (await algodclient.status()).lastRound;
+    return lastRound;
     return 0;
-    }
   }
 
   /** 
@@ -108,7 +105,7 @@ class AlgoHandler {
 
     // Use the algodClient to get the the app details
     // TODO -----------------------------------------------------------------------------
-    let app = {};
+    let app = this.algodClient;
 
     // The data might have a complex structure, feel free to console.log it to see the structure
 
@@ -286,23 +283,7 @@ class AlgoHandler {
 
 /*Helper function to connect to Algosigner*/
 function connectToAlgosigner() {
-    /*if AlgoSigner exists */
-    if(typeof AlgoSigner !== 'undefined') {
-        // connects to the browser AlgoSigner instance
-        AlgoSigner.connect()
-        // finds the TestNet accounts currently in AlgoSigner
-        .then(() => AlgoSigner.accounts({
-            ledger: 'TestNet'
-        }))
-        .then((accountData) => {
-            // the accountData object should contain the Algorand addresses from TestNet that AlgoSigner currently knows about
-            return accountData;
-        })
-        .catch((e) => {
-            // handle errors and perform error cleanup here
-            console.error(e);
-        }
-    }
+    AlgoSigner.connect().then(() => AlgoSigner.accounts({ledger: 'TestNet'})).then((accountData) => {return accountData});
 }
 
 // create and export a singular AlgoHandler instance

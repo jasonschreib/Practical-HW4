@@ -7,7 +7,7 @@ import unittest
 import time
 
 from algosdk.encoding import decode_address, encode_address
-from algosdk.future import transaction
+from algosdk import transaction
 from algosdk import account, mnemonic
 from algosdk.v2client import algod
 from pyteal import compileTeal, Mode
