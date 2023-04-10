@@ -33,7 +33,7 @@ def approval_program():
 
     # value of whether or not the sender can vote ("yes", "no", or "maybe")
     get_sender_can_vote = App.localGetEx(Int(0), App.id(), Bytes("can_vote"))
-    get_can_vote = App.localGetEx(Txn.application_args[1], App.id(), Bytes("Maybe"))
+    get_can_vote = App.localGetEx(Txn.application_args[1], App.id(), Bytes("can_vote"))
 
     # get_vote_sender is a value that the sender voted for,
     #   a number indicating the index in the VoteOptions string faux-array.
@@ -53,10 +53,9 @@ def approval_program():
                 get_vote_of_sender.hasValue(),
             ).Then(
                 Seq([
-                    App.globalPut(Concat(Bytes('VotesFor'),
-                                         itoa(get_vote_of_sender.value())),
-                    App.globalGet(Concat(Bytes('VotesFor')),
-                                  itoa(get_vote_of_sender.value()))) - Int(1),
+                    App.globalPut(Concat(Bytes('VotesFor'), itoa(get_vote_of_sender.value())),
+                                  App.globalGet(Concat(Bytes('VotesFor'), itoa(get_vote_of_sender.value()))) - Int(1)
+                                  ),
                     App.localDel(Int(0), Bytes('voted')),
                 ])
             ),
@@ -66,11 +65,13 @@ def approval_program():
 
     on_register = Seq(
         # TODO: REGISTRATION:
-        # assert that the user is registering before the election end
-        Assert(Global.round() < App.globalGet(Bytes('ElectionEnd'))),
-        # if so, in the user's account's local storage, set the can_vote var to "maybe"
-        App.localPut(Txn.sender(), Bytes('can_vote'), Bytes("maybe")),
-        Return(Int(1))
+        [
+            # assert that the user is registering before the election end
+            Assert(Global.round() < App.globalGet(Bytes('ElectionEnd'))),
+            # in the user's account's local storage, set the can_vote var to "maybe"
+            App.localPut(Txn.sender(), Bytes('can_vote'), Bytes("maybe")),
+            Return(Int(1)),
+        ]
     )
 
     on_update_user_status = Seq(
@@ -78,35 +79,45 @@ def approval_program():
         get_can_vote,
         # assert only the creator can approve/disapprove
         Assert(is_creator),
-        # AND can only be be approved before election ends
+        # AND can only be approved before election ends
         Assert(Global.round() < App.globalGet(Bytes('ElectionEnd'))),
+        # AND creator cannot update more than once
+        Assert(get_can_vote.value() == Bytes('maybe')),
         # fetch the creator's decision to approve/reject user account
         # update the user's voting status accordingly by setting user's can_vote local state
-        # AND creator cannot update more than once
+        App.localPut(Txn.application_args[1], Bytes('can vote'), Txn.application_args[2]),
         Return(Int(1))
     )
 
     choice = Btoi(Txn.application_args[1])
     on_vote = Seq(
         # TODO: USER VOTING LOGIC:
-
         [
-            # assert that the election is not over and user is allowed to vote
-            # if user already voted
+            # assert that the election is not over
             get_vote_of_sender,
+            get_sender_can_vote,
             Assert(Global.round() < App.globalGet(Bytes('ElectionEnd'))),
-            # Assert(user allowed to vote),
-            If(
-                And(
-                    get_vote_of_sender.hasValue(),
-                ),
-            ),
+            # AND assert user is allowed to vote
+            Assert(get_sender_can_vote.value() == Bytes('yes')),
+            # if user already voted
+            If(get_vote_of_sender.hasValue() == Int(1))
             # return a 0
-            Return(Int(0)),
-            # Assert the vote choice (it's above before the seq) is within index bounds of vote options
-            # update vote tally for user's choice under corresponding global vars
-            # record the user's vote index in acct local storage under key 'voted'
-            Return(Int(1))
+            .Then(Return(Int(0)))
+            .Else(Seq(
+                [
+                    # Assert the vote choice (it's above before the seq) is within index bounds of vote options
+                    Assert(choice >= Int(0)),
+                    Assert(choice < App.globalGet(Bytes('NumVoteOptions'))),
+                    # update vote tally for user's choice under corresponding global vars
+                    App.globalPut(
+                        Concat(Bytes('VotesFor'), itoa(choice)),
+                        App.globalGet(Concat(Bytes('VotesFor'), itoa(choice))) + Int(1)
+                    ),
+                    # record the user's vote index in acct local storage under key 'voted'
+                    App.localPut(Int(0), Bytes('voted'), choice),
+                    Return(Int(1)),
+                ]
+            )),
         ]
     )
 
@@ -131,10 +142,7 @@ def clear_state_program():
     """ Handles the logic of when an account clears its participation in a smart contract. """
 
     # TODO: CLEAR STATE PROGRAM
-    # Just like the close_out sequence,
-    # if the user clears state of program before the end of voting period
-    # then it removes their vote from the correct vote tally.
-    # Otherwise, it doesn't do anything.
+    # Just like the close_out sequence, but if user clears state of program before the end of voting period
     get_vote_of_sender = App.localGetEx(Int(0), App.id(), Bytes("voted"))
 
     program = Seq(
@@ -149,10 +157,9 @@ def clear_state_program():
                 get_vote_of_sender.hasValue(),
             ).Then(
                 Seq([
-                    App.globalPut(Concat(Bytes('VotesFor'),
-                                         itoa(get_vote_of_sender.value())),
-                                  App.globalGet(Concat(Bytes('VotesFor')),
-                                                itoa(get_vote_of_sender.value()))) - Int(1),
+                    App.globalPut(Concat(Bytes('VotesFor'), itoa(get_vote_of_sender.value())),
+                                  App.globalGet(Concat(Bytes('VotesFor'), itoa(get_vote_of_sender.value()))) - Int(1)
+                                  ),
                     App.localDel(Int(0), Bytes('voted')),
                 ])
             ),
