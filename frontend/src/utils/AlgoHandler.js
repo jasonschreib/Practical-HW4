@@ -167,7 +167,7 @@ class AlgoHandler {
 
     // The resultant JavaScript object (dictionary) may have a complex structure
     // Try to console.log it out to see the structure
-
+    console.log(this.indexerClient);
     // Go through the data and fill allLocalStates to contain all the users' local states
     // Note that the *keys* of smart contract local state variables will need to be decoded using 
     // our this.base64ToString(value) function

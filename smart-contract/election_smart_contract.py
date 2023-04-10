@@ -43,14 +43,13 @@ def approval_program():
     on_closeout = Seq(
         # TODO: CLOSE OUT:
         [
-        #called when user removes interaction with this smart contract from their account.
-
-        #Removes the user's vote from the correct vote tally if and only if the user closes out of program before the end of the election.
-        #Otherwise, does nothing
             get_vote_of_sender,
+            #called when user removes interaction with this smart contract from their account.
+            Assert(Global.round() < App.globalGet(Bytes('ElectionEnd'))),
+            #Removes the user's vote from the correct vote tally if and only if the user closes out of program before the end of the election.
+            #Otherwise, does nothing
             If(
                 And(
-                    Global.round() <= App.globalGet(Bytes("VoteEnd")),
                     get_vote_of_sender.hasValue(),
                 ),
                 App.globalPut(
