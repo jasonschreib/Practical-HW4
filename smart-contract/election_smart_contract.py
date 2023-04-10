@@ -19,7 +19,7 @@ def approval_program():
             App.globalPut(Bytes('VoteOptions'), Btoi(Txn.application_args[2])),
             # Set all initial vote tallies to 0 for all vote options, keys are the vote options
             For(
-            #vars storing votes for each option
+                # vars storing votes for each option
                 i.store(Int(0)), i.load() < Btoi(Txn.application_args[1]), i.store(i.load() + Int(1))
             ).Do(
                 App.globalPut(Concat(Bytes("VotesFor"), itoa(i.load())), Int(0))
@@ -44,10 +44,10 @@ def approval_program():
         # TODO: CLOSE OUT:
         [
             get_vote_of_sender,
-            #called when user removes interaction with this smart contract from their account.
+            # called when user removes interaction with this smart contract from their account.
             Assert(Global.round() < App.globalGet(Bytes('ElectionEnd'))),
-            #Removes the user's vote from the correct vote tally if and only if the user closes out of program before the end of the election.
-            #Otherwise, does nothing
+            # Removes the user's vote from the correct vote tally if and only if the user closes out of program
+            # before the end of the election. Otherwise, does nothing
             If(
                 And(
                     get_vote_of_sender.hasValue(),
@@ -63,6 +63,10 @@ def approval_program():
 
     on_register = Seq(
         # TODO: REGISTRATION:
+        # assert that the user is registering before the election end
+        Assert(Global.round() < App.globalGet(Bytes('ElectionEnd'))),
+        # if so, in the user's account's local storage, set the can_vote var to "maybe"
+        App.localPut(Txn.sender(), Bytes('can_vote'), Bytes("maybe")),
         Return(Int(1))
     )
 
@@ -116,7 +120,6 @@ def clear_state_program():
 
 
 if __name__ == "__main__":
-    
     with open("vote_approval.teal", "w") as f:
         compiled = compileTeal(approval_program(), mode=Mode.Application, version=5)
         f.write(compiled)
