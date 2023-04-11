@@ -1,8 +1,14 @@
+import subprocess
+
 from algosdk import transaction
 from algosdk import account, mnemonic
+from pyteal import *
+
 from secrets import account_mnemonics
 from election_params import local_ints, local_bytes, global_ints, \
     global_bytes
+from helper import compile_program, wait_for_confirmation, int_to_bytes, read_global_state, read_local_state
+
 
 # Define keys, addresses, and token
 account_private_keys = [mnemonic.to_private_key(mn) for mn in account_mnemonics]
@@ -20,13 +26,20 @@ def create_app(client, private_key, approval_program, clear_program, global_sche
     Return the newly created application ID
     """
     # TODO: define sender as creator
+    sender = account.address_from_private_key(private_key)
     # TODO: declare the on_complete transaction as a NoOp transaction
+    on_complete = transaction.OnComplete.NoOpOC.real
     # TODO: get node suggested parameters
+    params = client.suggested_params()
     # TODO: create unsigned transaction
+    txn = transaction.ApplicationOptInTxn(sender, params, index)
     # TODO: sign transaction
+    signed_txn = txn.sign(private_key)
+    tx_id = signed_txn.transaction.get_txid()
     # TODO: send transaction
+    client.send_transactions([signed_txn])
     # TODO: await confirmation
-
+    wait_for_confirmation(client, tx_id)
     # display results
     transaction_response = client.pending_transaction_info(tx_id)
     app_id = transaction_response["application-index"]
@@ -43,11 +56,15 @@ def create_vote_app(client, creator_private_key, election_end, num_vote_options,
     # TODO:
     # Get PyTeal approval program
     # compile program to TEAL assembly
+    teal_code = compileTeal(approval_program(), mode=Mode.Signature)
     # compile program to binary
+    result = subprocess.run(["goal", "clerk", "compile", "-t", teal_code], capture_output=True)
     # Do the same for PyTeal clear state program
-    # TODO: Create list of bytes for application arguments and create new application. 
 
-    app_id = None
+    # create list of bytes for application arguments
+    application_args = [Bytes('ElectionEnd'), Bytes('NumVoteOptions'), Bytes('VoteOptions')]
+    # TODO: Create new application
+    app_id = create_app(#...)
 
     return app_id
 
