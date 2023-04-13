@@ -32,7 +32,7 @@ def create_app(client, private_key, approval_program, clear_program, global_sche
     # TODO: get node suggested parameters
     params = client.suggested_params()
     # TODO: create unsigned transaction
-    txn = transaction.ApplicationOptInTxn(sender, params, index)
+    txn = transaction.ApplicationCreateTxn(sender, params, on_complete, approval_program, clear_program, global_schema, local_schema, app_args=app_args)
     # TODO: sign transaction
     signed_txn = txn.sign(private_key)
     tx_id = signed_txn.transaction.get_txid()
@@ -72,8 +72,24 @@ def create_vote_app(client, creator_private_key, election_end, num_vote_options,
 def main():
     # TODO: Initialize algod client and define absolute election end time fom the status of the last round.
     # TODO: Deploy the app and print the global state.
+    # Initialize the Algod client
+    algod_address = ""
+    algod_token = ""
+    algod_client = algod.AlgodClient(algod_token, algod_address)
 
-    pass
+    # Get the last round information
+    last_round = algod_client.status().get("lastRound")
+
+    # Define the absolute election end time
+    election_end = Global.latest_timestamp() + Int(1000)
+
+    # Deploy the app
+    app_id = algod_client.compileTeal(Expr(election_end), mode=pyteal.Mode.Application)
+    print("App ID:", app_id)
+
+    # Print the global state
+    app_info = algod_client.application_info(app_id)
+    print("Global state:", app_info["params"]["global-state"])
 
 
 if __name__ == "__main__":
