@@ -10,13 +10,13 @@ def approval_program():
     on_creation = Seq(
         [
             # Check number of required arguments are present
-            Assert(Txn.application_args.length() == 3),
+            Assert(Txn.application_args.length() == Int(3)),
             # Store relevant parameters of the election. When storing the options to vote for,
             # consider storing all of them as a string separated by commas e.g: "A,B,C,D".
             # Note that index-wise, A=0, B=1, C=2, D=3
             App.globalPut(Bytes('ElectionEnd'), Btoi(Txn.application_args[0])),
             App.globalPut(Bytes('NumVoteOptions'), Btoi(Txn.application_args[1])),
-            App.globalPut(Bytes('VoteOptions'), Btoi(Txn.application_args[2])),
+            App.globalPut(Bytes('VoteOptions'), (Txn.application_args[2])),
             # Set all initial vote tallies to 0 for all vote options, keys are the vote options
             For(
                 # vars storing votes for each option
@@ -46,20 +46,28 @@ def approval_program():
         [
             get_vote_of_sender,
             # called when user removes interaction with this smart contract from their account.
-            Assert(Global.round() < App.globalGet(Bytes('ElectionEnd'))),
-            # Removes the user's vote from the correct vote tally if and only if the user closes out of program
-            # before the end of the election. Otherwise, does nothing
             If(
-                get_vote_of_sender.hasValue(),
+                Global.round() < App.globalGet(Bytes("ElectionEnd"))
             ).Then(
-                Seq([
-                    App.globalPut(Concat(Bytes('VotesFor'), itoa(get_vote_of_sender.value())),
-                                  App.globalGet(Concat(Bytes('VotesFor'), itoa(get_vote_of_sender.value()))) - Int(1)
-                                  ),
-                    App.localDel(Int(0), Bytes('voted')),
-                ])
+                If(
+                    get_vote_of_sender.hasValue()
+                    # Removes the user's vote from the correct vote tally if and only if the user closes out of program
+                    # before the end of the election. Otherwise, does nothing
+                ).Then(
+                    Seq([
+                        App.globalPut(
+                            Concat(Bytes("VotesFor"), itoa(get_vote_of_sender.value())),
+                            App.globalGet(
+                                Concat(
+                                    Bytes("VotesFor"), itoa(get_vote_of_sender.value())
+                                )
+                            ) - Int(1)
+                        ),
+                        App.localDel(Int(0), Bytes("voted")),
+                    ])
+                )
             ),
-            Return(Int(1)),
+            Return(Int(1))
         ]
     )
 
@@ -131,8 +139,8 @@ def approval_program():
         [Txn.on_completion() == OnComplete.CloseOut, on_closeout],
         [Txn.on_completion() == OnComplete.OptIn, on_register],
         # 1.1: the cases that will trigger the update_user_status and on_vote sequences
-        [Txn.application_args[0] == Bytes["vote"], on_vote],
-        [Txn.application_args[0] == Bytes["update_user_status"], on_update_user_status]
+        [Txn.application_args[0] == Bytes("vote"), on_vote],
+        [Txn.application_args[0] == Bytes("update_user_status"), on_update_user_status]
     )
 
     return program
@@ -150,20 +158,28 @@ def clear_state_program():
         [
             get_vote_of_sender,
             # called when user removes interaction with this smart contract from their account.
-            Assert(Global.round() < App.globalGet(Bytes('ElectionEnd'))),
-            # Removes the user's vote from the correct vote tally if and only if the user closes out of program
-            # before the end of the election. Otherwise, does nothing
             If(
-                get_vote_of_sender.hasValue(),
+                Global.round() < App.globalGet(Bytes("ElectionEnd"))
             ).Then(
-                Seq([
-                    App.globalPut(Concat(Bytes('VotesFor'), itoa(get_vote_of_sender.value())),
-                                  App.globalGet(Concat(Bytes('VotesFor'), itoa(get_vote_of_sender.value()))) - Int(1)
-                                  ),
-                    App.localDel(Int(0), Bytes('voted')),
-                ])
+                If(
+                    get_vote_of_sender.hasValue()
+                    # Removes the user's vote from the correct vote tally if and only if the user closes out of program
+                    # before the end of the election. Otherwise, does nothing
+                ).Then(
+                    Seq([
+                        App.globalPut(
+                            Concat(Bytes("VotesFor"), itoa(get_vote_of_sender.value())),
+                            App.globalGet(
+                                Concat(
+                                    Bytes("VotesFor"), itoa(get_vote_of_sender.value())
+                                )
+                            ) - Int(1)
+                        ),
+                        App.localDel(Int(0), Bytes("voted")),
+                    ])
+                )
             ),
-            Return(Int(1)),
+            Return(Int(1))
         ]
     )
 

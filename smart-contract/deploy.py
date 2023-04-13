@@ -2,12 +2,16 @@ import subprocess
 
 from algosdk import transaction
 from algosdk import account, mnemonic
+from algosdk.v2client import algod
+from examples.application.asset import approval_program, clear_state_program
 from pyteal import *
 
 from secrets import account_mnemonics
 from election_params import local_ints, local_bytes, global_ints, \
-    global_bytes
+    global_bytes, relative_election_end, num_vote_options, vote_options
 from helper import compile_program, wait_for_confirmation, int_to_bytes, read_global_state, read_local_state
+from secrets import account_mnemonics, algod_token, algod_address, algod_headers
+from election_params import vote_options, num_vote_options
 
 
 # Define keys, addresses, and token
@@ -32,7 +36,7 @@ def create_app(client, private_key, approval_program, clear_program, global_sche
     # TODO: get node suggested parameters
     params = client.suggested_params()
     # TODO: create unsigned transaction
-    txn = transaction.ApplicationCreateTxn(sender, params, on_complete, approval_program, clear_program, global_schema, local_schema, app_args=app_args)
+    txn = transaction.ApplicationCreateTxn(sender, params, on_complete, approval_program, clear_program, global_schema, local_schema, app_args)
     # TODO: sign transaction
     signed_txn = txn.sign(private_key)
     tx_id = signed_txn.transaction.get_txid()
@@ -54,42 +58,62 @@ def create_vote_app(client, creator_private_key, election_end, num_vote_options,
     This function uses create_app and return the newly created application ID
     """
     # TODO:
-    # Get PyTeal approval program
+    # get PyTeal approval program
+    approval_program_ast = approval_program()
     # compile program to TEAL assembly
-    teal_code = compileTeal(approval_program(), mode=Mode.Signature)
+    approval_program_teal = compileTeal(
+        approval_program_ast, mode=Mode.Application, version=5
+    )
     # compile program to binary
-    result = subprocess.run(["goal", "clerk", "compile", "-t", teal_code], capture_output=True)
+    approval_program_compiled = compile_program(client, approval_program_teal)
     # Do the same for PyTeal clear state program
+    # get PyTeal clear state program
+    clear_state_program_ast = clear_state_program()
+    # compile program to TEAL assembly
+    clear_state_program_teal = compileTeal(
+        clear_state_program_ast, mode=Mode.Application, version=5
+    )
+    # compile program to binary
+    clear_state_program_compiled = compile_program(
+        client, clear_state_program_teal
+    )
 
     # create list of bytes for application arguments
-    application_args = [Bytes('ElectionEnd'), Bytes('NumVoteOptions'), Bytes('VoteOptions')]
+    application_args = [election_end, num_vote_options, vote_options]
     # TODO: Create new application
-    app_id = create_app(#...)
+    app_id = create_app(
+        client,
+        creator_private_key,
+        approval_program_compiled,
+        clear_state_program_compiled,
+        global_schema,
+        local_schema,
+        application_args,
+    )
 
     return app_id
+
 
 
 def main():
     # TODO: Initialize algod client and define absolute election end time fom the status of the last round.
     # TODO: Deploy the app and print the global state.
     # Initialize the Algod client
-    algod_address = ""
-    algod_token = ""
-    algod_client = algod.AlgodClient(algod_token, algod_address)
+    algod_client = algod.AlgodClient(algod_token, algod_address, algod_headers)
 
     # Get the last round information
-    last_round = algod_client.status().get("lastRound")
+    last_round = algod_client.status()["lastRound"]
 
     # Define the absolute election end time
-    election_end = Global.latest_timestamp() + Int(1000)
+    election_end = last_round + relative_election_end
 
     # Deploy the app
-    app_id = algod_client.compileTeal(Expr(election_end), mode=pyteal.Mode.Application)
+    app_id = create_vote_app(algod_client, account_private_keys[0], election_end, num_vote_options, vote_options)
     print("App ID:", app_id)
 
     # Print the global state
-    app_info = algod_client.application_info(app_id)
-    print("Global state:", app_info["params"]["global-state"])
+    app_info = read_global_state(algod_client, app_id)
+    print("Global state:", app_info)
 
 
 if __name__ == "__main__":

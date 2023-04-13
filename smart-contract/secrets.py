@@ -15,5 +15,8 @@ account_mnemonics = [
 # PureStake API token
 algod_headers = {"X-API-Key": "kP24aojJjz5ulq9hW4Mix6lhigQLQJkf3ANfiIGF"}
 
+algod_token = "kP24aojJjz5ulq9hW4Mix6lhigQLQJkf3ANfiIGF"
+
 # PureStake algod address
 algod_address = "https://testnet-algorand.api.purestake.io/ps2"
+
